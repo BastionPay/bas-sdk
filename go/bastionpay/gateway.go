@@ -13,6 +13,8 @@ import (
 	"github.com/golang/glog"
 	"bastionpay/utils"
 	"os"
+	"strconv"
+	"time"
 )
 
 // config
@@ -32,7 +34,9 @@ type userData struct {
 	UserKey string `json:"user_key"`
 	// message = (origin data -> rsa encode) -> base64
 	Message string `json:"message"`
-	// signature = (origin data -> rsa encode) -> sha512 -> rsa sign -> base64
+	// timestamp = Unix timestamp string
+	TimeStamp 	string `json:"time_stamp"`
+	// signature = ((origin data -> rsa encode)+time_stamp) -> sha512 -> rsa sign -> base64
 	Signature string `json:"signature"`
 }
 
@@ -130,6 +134,7 @@ func encryptData(message string) (*userData, error) {
 	// 用户数据
 	ud := &userData{}
 	ud.UserKey = userKey
+	ud.TimeStamp = strconv.FormatInt(time.Now().Unix(), 10)
 
 	bencrypted, err := func() ([]byte, error) {
 		bencrypted, err := utils.RsaEncrypt([]byte(message), server_pubkey, utils.RsaEncodeLimit2048)
@@ -148,6 +153,7 @@ func encryptData(message string) (*userData, error) {
 		var hashData []byte
 		hs := sha512.New()
 		hs.Write(bencrypted)
+		hs.Write([]byte(ud.TimeStamp))
 		hashData = hs.Sum(nil)
 
 		bsignature, err := utils.RsaSign(crypto.SHA512, hashData, user_prikey)
@@ -185,6 +191,7 @@ func decryptData(ud *userData) (string, error) {
 	var hashData []byte
 	hs := sha512.New()
 	hs.Write([]byte(bencrypted2))
+	hs.Write([]byte(ud.TimeStamp))
 	hashData = hs.Sum(nil)
 
 	err = utils.RsaVerify(crypto.SHA512, hashData, bsignature2, server_pubkey)
