@@ -1,4 +1,4 @@
-package bastionpay
+package gateway
 
 import (
 	"fmt"
@@ -10,15 +10,14 @@ import (
 	"encoding/base64"
 	"bytes"
 	"strings"
-	"github.com/golang/glog"
-	"bastionpay/utils"
 	"os"
 	"strconv"
 	"time"
+	"bas-sdk/go-bastionpay/utils"
 )
 
 // config
-type Gateway struct {
+type Config struct {
 	Host    string `yaml:"host"`
 	UserKey string `yaml:"userKey"`
 	KeyPath string `yaml:"keyPath"`
@@ -67,9 +66,9 @@ var (
 	server_pubkey []byte
 )
 
-func Init(config *Gateway) {
+func Init(config *Config) {
 	 if err := loadRsaKeys(config); err != nil {
-		 glog.Errorf("BastionPay Init: %s", err.Error())
+		 fmt.Errorf("BastionPay Init: %s", err.Error())
 		 os.Exit(1)
 	 }
 }
@@ -79,19 +78,19 @@ func CallApi(message, path string) (*userResponseData, []byte, error) {
 }
 
 // 加载数据
-func loadRsaKeys(config *Gateway) error {
+func loadRsaKeys(config *Config) error {
 	var err error
 
 	host = config.Host
 	userKey = config.UserKey
 
-	private := fmt.Sprintf("%s/%s", strings.Trim(config.KeyPath, "/"), "private_administrator.pem")
+	private := fmt.Sprintf("%s/%s", strings.Trim(config.KeyPath, "/"), "private_rsa.pem")
 	user_prikey, err = ioutil.ReadFile(private)
 	if err != nil {
 		return err
 	}
 
-	public := fmt.Sprintf("%s/%s", strings.Trim(config.KeyPath, "/"), "public_administrator.pem")
+	public := fmt.Sprintf("%s/%s", strings.Trim(config.KeyPath, "/"), "public_rsa.pem")
 	user_pubkey, err = ioutil.ReadFile(public)
 	if err != nil {
 		return err
@@ -215,7 +214,6 @@ func sendData(message, relativePath, path string) (*userResponseData, []byte, er
 		resMsg []byte
 		resErr error
 	)
-	glog.Infof("BastionPay request: %s-%s", "/" + relativePath + path, message)
 
 	resData, resMsg, resErr = func()(*userResponseData, []byte, error){
 		ud, err := encryptData(message)
@@ -249,16 +247,6 @@ func sendData(message, relativePath, path string) (*userResponseData, []byte, er
 
 		return ackData, []byte(resMessage), nil
 	}()
-
-	if resErr != nil {
-		glog.Errorf("BastionPay response err: %s-%s", "/" + relativePath + path, resErr.Error())
-	} else if resData.Err != 0 {
-		glog.Errorf("BastionPay response errcode: %s-%d-%s", "/" + relativePath + path, resData.Err, resData.ErrMsg)
-	} else if resMsg != nil{
-		glog.Infof("BastionPay response msg: %s-%s", "/" + relativePath + path, resMsg)
-	} else {
-		glog.Infof("BastionPay response msg: %s-unknown", "/" + relativePath + path)
-	}
 
 	return resData, resMsg, resErr
 }
