@@ -78,7 +78,7 @@ std::shared_ptr<Err> BasSdk::loadPemKeys(std::string pemPath){
     if (fp2  == NULL) {
         return std::make_shared<Err>(CONST_ErrCode_OpenFile,  serverPubPath+" open err");
     }
-    this->mServerPubKey = PEM_read_RSA_PUBKEY(fp2, NULL, NULL, NULL);
+    this->mServerPubKey = PEM_read_RSA_PUBKEY(fp2, NULL, NULL, NULL);//PEM_read_RSAPublicKey  PEM_read_RSA_PUBKEY
     if ( this->mServerPubKey == nullptr) {
         return std::make_shared<Err>(CONST_ErrCode_OpenFile, "null pem_pub_key "+ serverPubPath);
     }

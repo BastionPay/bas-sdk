@@ -14,6 +14,8 @@ import chardet
 # Copyright (C) 2018-08-15 ......
 # Author: pingzilao
 # Email: pingzilao@qq.com
+# 注意点：目前只支持BEGIN PUBLIC KEY格式的pem文件; 
+#        如果生成了BEGIN RSA PUBLIC KEY格式的pem文件，首尾手动删掉‘RSA ‘这四个字符就行 
 
 userPubPemName = "public_rsa.pem"
 userPriPemName = "private_rsa.pem"

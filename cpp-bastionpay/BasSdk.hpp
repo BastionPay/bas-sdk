@@ -54,7 +54,7 @@ public:
     std::shared_ptr<Err> Call(std::string input, std::string path, std::string& output);
 
 private:
-    //加载密钥文件
+    //加载密钥文件， 目前只支持BEGIN PUBLIC KEY格式的pem文件; 如果生成了BEGIN RSA PUBLIC KEY格式的pem文件，首尾手动删掉‘RSA ‘这四个字符就行 
     std::shared_ptr<Err> loadPemKeys(std::string pemPath);
     //http请求
     std::shared_ptr<Err> callHttp(std::string& url, std::string& body, std::string& data) ;
