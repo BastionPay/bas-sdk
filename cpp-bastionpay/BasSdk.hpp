@@ -1,3 +1,8 @@
+/*********************************************
+ * Copyright (C) 2018-08-15 ......
+ * Author: pingzilao
+ * Email: pingzilao@qq.com
+ **********************************************/
 #include <iostream>
 #include <string>
 #include <openssl/rsa.h>
