@@ -11,6 +11,10 @@ import urllib2
 import sys
 import chardet
 
+# Copyright (C) 2018-08-15 ......
+# Author: pingzilao
+# Email: pingzilao@qq.com
+
 userPubPemName = "public_rsa.pem"
 userPriPemName = "private_rsa.pem"
 BastionpayPubPemName = "bastionpay_public.pem"
