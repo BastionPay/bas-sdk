@@ -28,7 +28,7 @@ BasSdk::BasSdk(std::string userKey, std::string host, std::string pemPath):mUser
   std::shared_ptr<Err> err = this->loadPemKeys(pemPath);
    if  (err != nullptr ){
        std::cout<<"loadPemKeys fail:"<<err->what()<<std::endl;
-       exit(1);
+       throw err->what();
    } 
 }
 
