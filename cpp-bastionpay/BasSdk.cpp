@@ -125,13 +125,15 @@ std::shared_ptr<Err> BasSdk::callHttp(std::string& url, std::string& body, std::
 std::shared_ptr<Err> BasSdk::encodeReq(const std::string& fromMsg, std::string& toMsg){
     std::time_t timestamp = std::time(0);
     std::string timestampStr = std::to_string((long long)timestamp);
-    std::string encrptyMsg;
+    ////std::string encrptyMsg;
+    Buffer encrptyMsg;
     std::shared_ptr<Err> err = this->rsaEncrypt(fromMsg, encrptyMsg, CONST_RsaEncodeLimit2048);
     if (err != nullptr) {
         return err;
     }
-    std::string sig;
-    err = this->rsaSign(encrptyMsg,timestampStr,  sig);
+    ////std::string sig;
+    Buffer sig;
+    err = this->rsaSign(encrptyMsg, timestampStr, sig);
     if (err != nullptr){
         return err;
     }
@@ -159,7 +161,8 @@ std::shared_ptr<Err> BasSdk::decodeRes(Json::Value& root, std::string& toMsg){
     std::string timeStamp = root["time_stamp"].asString();
 
     
-    std::string encryptMsg, sig;
+    ////std::string encryptMsg, sig;
+    Buffer encryptMsg, sig;
     std::shared_ptr<Err>  err = this->base64Decode(encryptMsgBase64, false, encryptMsg);
     if (err != nullptr) {
         return err;
@@ -175,56 +178,63 @@ std::shared_ptr<Err> BasSdk::decodeRes(Json::Value& root, std::string& toMsg){
    return  this->rsaDecrypt(encryptMsg, toMsg, CONST_RsaDecodeLimit2048);
 }
 
-std::shared_ptr<Err> BasSdk::rsaEncrypt(const std::string& deMsg, std::string& enMsg, uint limit){
+std::shared_ptr<Err> BasSdk::rsaEncrypt(const std::string& deMsg, Buffer& enMsg, uint limit){
     uint startIndex, endIndex;
     startIndex = endIndex = 0;
     uint length = deMsg.length();
     unsigned char to[limit];
     enMsg.clear();
     while (startIndex < length){
-         if ((startIndex + limit) < length) {
-             endIndex = startIndex + limit;
-         }else{
-             endIndex = length;
-         }
-         std::string tmpData = deMsg.substr(startIndex,endIndex);
-         int ret =  RSA_public_encrypt(limit, (const unsigned char*)tmpData.c_str(), to, this->mServerPubKey, RSA_PKCS1_PADDING);
+        if ((startIndex + limit) < length) {
+            endIndex = startIndex + limit;
+        }else{
+            endIndex = length;
+        }
+        std::string tmpData = deMsg.substr(startIndex,endIndex);
+        int ret =  RSA_public_encrypt(tmpData.length(), (const unsigned char*)tmpData.c_str(), to, this->mServerPubKey, RSA_PKCS1_PADDING);
         if (ret == -1 ){//-1表出错
             return std::make_shared<Err>(CONST_ErrCode_RsaPubEncrypt, this->opensslErrStr());
         }
-        enMsg.append((char *)to);
+        ////enMsg.append((char *)to);
+        enMsg.append((const char *)to, ret);
         startIndex = endIndex;
     }
     return nullptr;
 }
 
-std::shared_ptr<Err> BasSdk::rsaDecrypt(std::string& enMsg, std::string& deMsg, uint limit){
+std::shared_ptr<Err> BasSdk::rsaDecrypt(Buffer& enMsg, std::string& deMsg, uint limit){
     uint  startIndex=0, endIndex =0;
     uint  length = enMsg.length();
     unsigned char to[limit];
     deMsg.clear();
     while (startIndex < length){
         if ((startIndex + limit) < length) {
-                endIndex = startIndex + limit;
+             endIndex = startIndex + limit;
         }else{
-                  endIndex = length;
+             endIndex = length;
         }
-        std::string tmp = enMsg.substr(startIndex, endIndex);
-        int ret =  RSA_private_decrypt(limit, (const unsigned char*)tmp.c_str(), to, this->mUserPriKey, RSA_PKCS1_PADDING);
+        //std::string tmp = enMsg.substr(startIndex, endIndex);
+        const unsigned char* tmp = (const unsigned char*)(enMsg.dataPtr() + startIndex);
+        memset(to, 0, limit);
+        int ret =  RSA_private_decrypt(endIndex-startIndex, (const unsigned char*)tmp, to, this->mUserPriKey, RSA_PKCS1_PADDING);
         if(ret == -1) {//-1表出错
             return std::make_shared<Err>(CONST_ErrCode_RsaPriDecrypt, this->opensslErrStr());
         }
-        deMsg.append((char*)to);
+        ////deMsg.append((char*)to);
+        deMsg.append((char*)to, ret);
         startIndex = endIndex;
     }
     return nullptr;
 }
 
-std::shared_ptr<Err> BasSdk::rsaSign(std::string& msg, std::string& timestamp, std::string& sig){
-    std::string newMsg = msg+ timestamp;
+std::shared_ptr<Err> BasSdk::rsaSign(Buffer& msg, std::string& timestamp, Buffer& sig){
+    ////std::string newMsg = msg+ timestamp;
+    Buffer newMsg(msg);
+    newMsg.append(timestamp.c_str(), timestamp.size());
+
     unsigned char md[512/8], sigret[RSA_size(this->mUserPriKey)];
     memset(sigret, 0, RSA_size(this->mUserPriKey));
-    unsigned char* ret = SHA512((const unsigned char*)newMsg.c_str(), (size_t)newMsg.length(), md);
+    unsigned char* ret = SHA512((const unsigned char*)newMsg.dataPtr(), (size_t)newMsg.length(), md);
     if (ret == nullptr) {
         return std::make_shared<Err>(CONST_ErrCode_SHA512, "rsaSign SHA512 failed");
     }
@@ -233,19 +243,22 @@ std::shared_ptr<Err> BasSdk::rsaSign(std::string& msg, std::string& timestamp, s
     if (code != 1 ){ //1表示成功
         return std::make_shared<Err>(CONST_ErrCode_RsaSign, this->opensslErrStr());
     }
-    sig.assign((const char*)sigret, siglen);
+    ////sig.assign((const char*)sigret, siglen);
+    sig.append((const char*)sigret, siglen);
     return nullptr;
 }
 
-std::shared_ptr<Err> BasSdk::signVerify(std::string& msg, std::string& timestamp, std::string& sig){
-    std::string newMsg = msg+ timestamp;
+std::shared_ptr<Err> BasSdk::signVerify(Buffer& msg, std::string& timestamp, Buffer& sig){
+    ////std::string newMsg = msg+ timestamp;
+    Buffer newMsg(msg);
+    newMsg.append(timestamp.c_str(), timestamp.size());
     unsigned char md[512/8], sigret[RSA_size(this->mUserPriKey)];
-    unsigned char* ret = SHA512((const unsigned char*)newMsg.c_str(), newMsg.length(), md);
+    unsigned char* ret = SHA512((const unsigned char*)newMsg.dataPtr(), newMsg.length(), md);
     if (ret == nullptr) {
         return std::make_shared<Err>(CONST_ErrCode_SHA512, "signVerify SHA512 failed");
     }
     int code = RSA_verify(NID_sha512, md, 512/8,
-                (const unsigned char *)sig.c_str(), sig.length(), this->mServerPubKey);
+                (const unsigned char *)sig.dataPtr(), sig.length(), this->mServerPubKey);
     if (code != 1 ){//1表示成功
         return std::make_shared<Err>(CONST_ErrCode_SigVerify, this->opensslErrStr());
     }
@@ -263,7 +276,7 @@ std::string BasSdk::opensslErrStr(){
     return pTmp;
 }
 
-std::shared_ptr<Err> BasSdk::base64Encode(const std::string& input, bool with_new_line, std::string& output){
+std::shared_ptr<Err> BasSdk::base64Encode(const Buffer& input, bool with_new_line, std::string& output){
     if (input.empty()){
         return nullptr;
     }
@@ -284,7 +297,7 @@ std::shared_ptr<Err> BasSdk::base64Encode(const std::string& input, bool with_ne
         return std::make_shared<Err>(CONST_ErrCode_Base64Encode, "null BIO_new_mem_buf");
     }
     b64 = BIO_push(b64, bmem);
-    BIO_write(b64, input.c_str(), input.length());
+    BIO_write(b64, input.dataPtr(), input.length());
     BIO_flush(b64);
     BIO_get_mem_ptr(b64, &bptr);
  
@@ -296,7 +309,7 @@ std::shared_ptr<Err> BasSdk::base64Encode(const std::string& input, bool with_ne
     return nullptr;
 }
 
-std::shared_ptr<Err> BasSdk::base64Decode(const std::string& input, bool with_new_line, std::string& output){
+std::shared_ptr<Err> BasSdk::base64Decode(const std::string& input, bool with_new_line, Buffer& output){
     if (input.empty()){
         return nullptr;
     }
@@ -324,7 +337,8 @@ std::shared_ptr<Err> BasSdk::base64Decode(const std::string& input, bool with_ne
         std::string errInfo =  this->opensslErrStr();
         return std::make_shared<Err>(CONST_ErrCode_Base64Decode, errInfo);
     }
-    output.assign((const char*)buffer, size);
+    //output.assign((const char*)buffer, size);
+    output.append((const char*)buffer, size);
     BIO_free_all(b64);
     return nullptr;
 }

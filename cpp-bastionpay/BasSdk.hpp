@@ -3,6 +3,9 @@
  * Author: pingzilao
  * Email: pingzilao@qq.com
  **********************************************/
+#ifndef BASSDK_HPP_
+#define BASSDK_HPP_
+
 #include <iostream>
 #include <string>
 #include <openssl/rsa.h>
@@ -10,6 +13,7 @@
 #include <json/json.h>
 #include <mutex>
 
+#include "basbuffer.hpp"
 //#pragma GCC diagnostic error "-Wundef -std=c++11"
 
 namespace BastionPay{
@@ -63,17 +67,17 @@ private:
     //解码，包括解密，签名验证，unbase64
     std::shared_ptr<Err> decodeRes(Json::Value &root, std::string& toMsg);
     //加密数据
-    std::shared_ptr<Err> rsaEncrypt(const std::string& deMsg, std::string& enMsg, uint limit);
+    std::shared_ptr<Err> rsaEncrypt(const std::string& deMsg, Buffer& enMsg, uint limit);
     //解密数据
-    std::shared_ptr<Err> rsaDecrypt(std::string& enMsg, std::string& deMsg, uint limit);
+    std::shared_ptr<Err> rsaDecrypt(Buffer& enMsg, std::string& deMsg, uint limit);
     //生成签名
-    std::shared_ptr<Err> rsaSign(std::string& msg, std::string& timestamp, std::string& sig);
+    std::shared_ptr<Err> rsaSign(Buffer& msg, std::string& timestamp, Buffer& sig);
     //验证签名
-    std::shared_ptr<Err> signVerify(std::string& msg, std::string& timestamp, std::string& sig);
+    std::shared_ptr<Err> signVerify(Buffer& msg, std::string& timestamp, Buffer& sig);
     //base64编码
-    std::shared_ptr<Err> base64Encode(const std::string& input, bool with_new_line, std::string& output);
+    std::shared_ptr<Err> base64Encode(const Buffer& input, bool with_new_line, std::string& output);
     //base64解码
-    std::shared_ptr<Err> base64Decode(const std::string& input, bool with_new_line, std::string& output);
+    std::shared_ptr<Err> base64Decode(const std::string& input, bool with_new_line, Buffer& output);
     //获取openssl错误
     std::string opensslErrStr();
     //curl回调
@@ -89,3 +93,5 @@ private:
 
 
 };
+
+#endif
